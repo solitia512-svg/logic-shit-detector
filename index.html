@@ -11,6 +11,7 @@
       background: #f5f5f0;
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 2rem 1rem;
@@ -24,7 +25,7 @@
       border: 1px solid #e8e8e0;
     }
     .title { font-size: 22px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
-    .subtitle { font-size: 13px; color: #999; margin-bottom: 1.5rem; }
+    .subtitle { font-size: 12px; color: #aaa; margin-bottom: 1.5rem; line-height: 1.6; }
     textarea {
       width: 100%; min-height: 140px; padding: 12px;
       font-size: 15px; font-family: inherit;
@@ -70,13 +71,14 @@
       font-size: 15px; color: #1a1a1a; line-height: 1.7;
       margin-bottom: 8px; background: #fafaf8; border-radius: 0 8px 8px 0;
     }
-    .footer-note { margin-top: 12px; font-size: 12px; color: #bbb; text-align: right; }
+    .footer-note { margin-top: 16px; padding-top: 16px; border-top: 1px solid #f0f0ea; font-size: 11px; color: #ccc; text-align: center; letter-spacing: 0.3px; }
+    .page-footer { margin-top: 1.5rem; font-size: 11px; color: #ccc; text-align: center; letter-spacing: 0.3px; line-height: 1.8; width: 100%; max-width: 600px; }
   </style>
 </head>
 <body>
 <div class="card">
   <div class="title">Logic Shit Detector</div>
-  <div class="subtitle">前同事遗留系统 v1.0 · 开箱即用，无需AI</div>
+  <div class="subtitle">前同事遗留系统 v1.0<br><span style="font-size:11px;">检测结果不构成任何专业意见</span></div>
   <textarea id="input" placeholder="把proposal、方案、任何奇怪言论粘贴进来..."></textarea>
   <button class="btn" onclick="detect()">开始检测</button>
   <div class="result" id="result">
@@ -85,19 +87,20 @@
     <div class="score-bar"><div class="score-fill" id="score-fill" style="width:0%"></div></div>
     <div class="detected" id="detected-words"></div>
     <div id="quotes"></div>
-    <div class="footer-note">— 由离职同事友情开发，保持怀疑，独立思考</div>
+
   </div>
 </div>
+<p class="page-footer">— 由离职同事友情开发，保持怀疑，独立思考<br>Powered by amentia intelligence（人工智障）</p>
 
 <script>
-const BUZZWORDS = [
+var BUZZWORDS = [
   "赋能","拉通","对齐","生态","闭环","抓手","颗粒度","底层逻辑",
   "顶层设计","方法论","赛道","护城河","降维打击","破圈","沉淀",
   "复盘","迭代","链路","跑通","落地","打法","势能","心智","体感",
   "感知","触达","场景","差异化","协同","联动","叙事","复用边界","落点"
 ];
 
-const STRUCTURE_CHECKS = [
+var STRUCTURE_CHECKS = [
   {
     test: function(t) { return /不是.{1,20}而是/.test(t); },
     label: "AI句式", score: 40,
@@ -106,13 +109,25 @@ const STRUCTURE_CHECKS = [
       "「不是A，而是B」—— 经典AI文风。这段话是人写的还是机器挤出来的？建议作者自查。"
     ]
   },
-  { test: function(t) { return (t.match(/[？?]/g)||[]).length > (t.match(/[。！!]/g)||[]).length; }, label: "问号多于句号", score: 20 },
-  { test: function(t) { return t.length > 300 && !/\d/.test(t); }, label: "无数据支撑", score: 20 },
-  { test: function(t) { return (t.match(/以及|同时|另外|此外/g)||[]).length >= 3; }, label: "连词堆砌", score: 20 },
-  { test: function(t) { return t.length > 100 && (t.match(/[。！？!?]/g)||[]).length < 3; }, label: "断句混乱", score: 20 }
+  {
+    test: function(t) { return (t.match(/[？?]/g)||[]).length > (t.match(/[。！!]/g)||[]).length; },
+    label: "问号多于句号", score: 20
+  },
+  {
+    test: function(t) { return t.length > 300 && !/\d/.test(t); },
+    label: "无数据支撑", score: 20
+  },
+  {
+    test: function(t) { return (t.match(/以及|同时|另外|此外/g)||[]).length >= 3; },
+    label: "连词堆砌", score: 20
+  },
+  {
+    test: function(t) { return t.length > 100 && (t.match(/[。！？!?]/g)||[]).length < 3; },
+    label: "断句混乱", score: 20
+  }
 ];
 
-const QUOTES = {
+var QUOTES = {
   shit: [
     "This is beyond救了，建议撕了重写。",
     "This proposal is a disaster. 睡桥洞去吧，顺便想想怎么重写。",
@@ -134,26 +149,35 @@ const QUOTES = {
   ]
 };
 
-const GIBBERISH_QUOTES = [
+var GIBBERISH_QUOTES = [
   "@¥&%！#& what are you talking about？keyboards有手就行。",
   "检测到人类情绪宣泄。这不是proposal，这是键盘的呐喊。",
   "Invalid input. 你是在打字还是在用头撞键盘？"
 ];
 
-const SHORT_QUOTES = [
+var SHORT_QUOTES = [
   "字数不足，无从下嘴。请喂我更多屎。",
   "太短了，连屎都没资格当。多写点。",
   "Sample size不足，无法判定。你是在写proposal还是发微博？"
 ];
 
-const OFFHOURS_QUOTES = [
+var OFFHOURS_QUOTES = [
   "现在是非工作时间，你有加班费吗？",
   "系统提示：现在不是上班时间。这份proposal是在用生命在写吗？",
   "非工作时间检测到异常活动。建议先睡觉，屎明天再品。"
 ];
 
+var LEADER_OPINION_QUOTES = [
+  "这里没有领导，只有逻辑。",
+  "该同事已经离职了，谁也管不到。"
+];
+
+var LEADER_TRIGGER_WORDS = ["你觉得","怎么看","看法","意见","评价","认为","感觉","如何"];
+var LEADER_NEWS_WORDS = ["表示","指出","强调","指示","批示","莅临","出席","视察","发言","讲话"];
+var LEADER_KEYWORDS = ["领导","主任","会长"];
+
 function pick(arr, n) {
-  return [...arr].sort(function() { return Math.random() - 0.5; }).slice(0, n);
+  return arr.slice().sort(function() { return Math.random() - 0.5; }).slice(0, n);
 }
 
 function isOffHours() {
@@ -174,6 +198,44 @@ function isGibberish(text) {
   return chinese < 3 && ascii > 4;
 }
 
+// 1.1 检测短语重复4次以上 或 单字连续重复3次以上
+function detectRepeatCrazy(text) {
+  // 单字连续重复3次以上
+  if (/(.)\1{2,}/.test(text)) return true;
+  // 2字以上短语重复4次以上
+  var words = text.match(/[\u4e00-\u9fff]{2,}/g) || [];
+  var seen = {};
+  for (var i = 0; i < words.length; i++) {
+    var w = words[i];
+    seen[w] = (seen[w] || 0) + 1;
+    if (seen[w] >= 4) return true;
+  }
+  return false;
+}
+
+// 1.2 检测2字以上词重复，两次间隔<=4字符
+function detectRepeatStuck(text) {
+  var pattern = /([\u4e00-\u9fff]{2,}).{0,4}\1/;
+  return pattern.test(text);
+}
+
+// 领导检测：判断是询问看法还是新闻稿
+function detectLeader(text) {
+  var hasLeader = LEADER_KEYWORDS.some(function(w) { return text.indexOf(w) !== -1; });
+  if (!hasLeader) return null;
+
+  // 检查是否是新闻稿语境
+  var isNews = LEADER_NEWS_WORDS.some(function(w) { return text.indexOf(w) !== -1; });
+  if (isNews) return null;
+
+  // 检查是否是询问看法语境
+  var isOpinion = LEADER_TRIGGER_WORDS.some(function(w) { return text.indexOf(w) !== -1; });
+  if (isOpinion) return 'opinion';
+
+  // 默认也触发（提到了领导但不是新闻稿）
+  return 'opinion';
+}
+
 function showResult(level, label, scoreVal, detectedHTML, quotesArr) {
   document.getElementById('result').style.display = 'block';
   var badge = document.getElementById('verdict-badge');
@@ -192,19 +254,38 @@ function detect() {
   var text = document.getElementById('input').value.trim();
   if (!text) return;
 
+  // 乱码检测
   if (isGibberish(text)) {
     showResult('meh', '无效输入', 20, '', pick(GIBBERISH_QUOTES, 1));
     return;
   }
 
+  // 字数太短
   if (text.length < 30) {
     showResult('meh', '样本不足', 10, '', pick(SHORT_QUOTES, 1));
     return;
   }
 
+  // 1.1 疯了检测（优先级高于1.2）
+  if (detectRepeatCrazy(text)) {
+    showResult('shit', '一坨屎', 90, '', ['上班上得彻底疯了？胡言乱语呢？']);
+    return;
+  }
+
+  // 1.2 卡壳检测
+  var isStuck = detectRepeatStuck(text);
+
   var score = 0;
   var detected = [];
   var specialQuotes = [];
+
+  // 领导检测
+  var leaderResult = detectLeader(text);
+  if (leaderResult === 'opinion') {
+    detected.push('领导相关');
+    specialQuotes = specialQuotes.concat(LEADER_OPINION_QUOTES);
+    score += 20;
+  }
 
   BUZZWORDS.forEach(function(w) {
     if (text.indexOf(w) !== -1) { score += 15; detected.push(w); }
@@ -230,11 +311,16 @@ function detect() {
     : '未检测到明显问题词汇';
 
   var finalQuotes = [];
+
+  if (isStuck) {
+    finalQuotes.push('卡壳了？');
+  }
+
   if (specialQuotes.length) {
     finalQuotes.push(pick(specialQuotes, 1)[0]);
     if (level !== 'ok') finalQuotes.push(pick(QUOTES[level], 1)[0]);
   } else {
-    finalQuotes = pick(QUOTES[level], level === 'ok' ? 1 : 2);
+    finalQuotes = finalQuotes.concat(pick(QUOTES[level], level === 'ok' ? 1 : 2));
   }
 
   if (isOffHours()) {
