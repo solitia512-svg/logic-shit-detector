@@ -254,6 +254,15 @@ function detect() {
   var text = document.getElementById('input').value.trim();
   if (!text) return;
 
+  // 领导检测（最高优先级，优于一切）
+  var leaderResult = detectLeader(text);
+  if (leaderResult === 'opinion') {
+    var leaderQuotes = LEADER_OPINION_QUOTES.slice();
+    if (isOffHours()) leaderQuotes.push(pick(OFFHOURS_QUOTES, 1)[0]);
+    showResult('meh', '无可奉告', 0, '', leaderQuotes);
+    return;
+  }
+
   // 乱码检测
   if (isGibberish(text)) {
     showResult('meh', '无效输入', 20, '', pick(GIBBERISH_QUOTES, 1));
@@ -272,20 +281,15 @@ function detect() {
     return;
   }
 
-  // 1.2 卡壳检测
-  var isStuck = detectRepeatStuck(text);
+  // 1.2 卡壳检测（单独处理，直接return）
+  if (detectRepeatStuck(text)) {
+    showResult('meh', '卡壳了', 30, '', ['卡壳了？']);
+    return;
+  }
 
   var score = 0;
   var detected = [];
   var specialQuotes = [];
-
-  // 领导检测
-  var leaderResult = detectLeader(text);
-  if (leaderResult === 'opinion') {
-    detected.push('领导相关');
-    specialQuotes = specialQuotes.concat(LEADER_OPINION_QUOTES);
-    score += 20;
-  }
 
   BUZZWORDS.forEach(function(w) {
     if (text.indexOf(w) !== -1) { score += 15; detected.push(w); }
@@ -311,10 +315,6 @@ function detect() {
     : '未检测到明显问题词汇';
 
   var finalQuotes = [];
-
-  if (isStuck) {
-    finalQuotes.push('卡壳了？');
-  }
 
   if (specialQuotes.length) {
     finalQuotes.push(pick(specialQuotes, 1)[0]);
