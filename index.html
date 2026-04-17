@@ -215,7 +215,7 @@ function detectRepeatCrazy(text) {
 
 // 1.2 检测2字以上词重复，两次间隔<=4字符
 function detectRepeatStuck(text) {
-  var pattern = /([\u4e00-\u9fff]{2,}).{0,4}\1/;
+  var pattern = /([\u4e00-\u9fff]{2,}).{0,3}\1/;
   return pattern.test(text);
 }
 
@@ -283,7 +283,7 @@ function detect() {
 
   // 1.2 卡壳检测（单独处理，直接return）
   if (detectRepeatStuck(text)) {
-    showResult('meh', '卡壳了', 30, '', ['卡壳了？还是上班上疯了？']);
+    showResult('meh', '卡卡卡', 30, '', ['卡壳了？还是上班上疯了？']);
     return;
   }
 
