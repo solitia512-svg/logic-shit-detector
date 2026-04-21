@@ -66,6 +66,17 @@
       display: inline-block; background: #f0f0ea; color: #666;
       border-radius: 4px; padding: 2px 8px; margin: 2px 3px 2px 0; font-size: 12px;
     }
+    .boom-badge {
+      display: inline-block; font-size: 12px; font-weight: 600;
+      padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; margin-left: 6px;
+      letter-spacing: 0.5px; background: #1a1a1a; color: #fff;
+    }
+    .boom-note {
+      font-size: 13px; color: #888; margin-bottom: 12px; font-style: italic;
+    }
+    .quote.boom-quote {
+      border-left: 3px solid #1a1a1a; background: #f5f5f5;
+    }
     .quote {
       border-left: 3px solid #e0e0d8; padding: 10px 14px;
       font-size: 15px; color: #1a1a1a; line-height: 1.7;
@@ -82,7 +93,7 @@
   <textarea id="input" placeholder="把proposal、方案、任何奇怪言论粘贴进来..."></textarea>
   <button class="btn" onclick="detect()">开始检测</button>
   <div class="result" id="result">
-    <span class="verdict" id="verdict-badge"></span>
+    <span class="verdict" id="verdict-badge"></span><span class="boom-badge" id="boom-badge" style="display:none">检测到爆炸屎</span><div class="boom-note" id="boom-note" style="display:none">系统有被刺激到，判断不下去了</div>
     <div class="score-label">屎山指数</div>
     <div class="score-bar"><div class="score-fill" id="score-fill" style="width:0%"></div></div>
     <div class="detected" id="detected-words"></div>
@@ -97,7 +108,7 @@ var BUZZWORDS = [
   "赋能","拉通","对齐","生态","底座","闭环","抓手","颗粒度","底层逻辑",
   "顶层设计","方法论","CLCD","赛道","护城河","降维打击","破圈","沉淀",
   "复盘","迭代","链路","复用","跑通","落地","打法","势能","心智","体感",
-  "感知","触达","场景","差异化","协同","联动","叙事","复用边界","落点"
+  "感知","触达","场景","差异化","协同","联动","叙事","复用边界","落点","稳住","蒸馏","稳稳"
 ];
 
 var STRUCTURE_CHECKS = [
@@ -165,6 +176,25 @@ var OFFHOURS_QUOTES = [
   "现在是非工作时间，你有加班费吗？",
   "系统提示：现在不是上班时间。这份proposal是在用生命在写吗？",
   "非工作时间检测到异常活动。建议先睡觉，屎明天再品。"
+];
+
+var BOOM_CHECKS = [
+  {
+    test: function(t) { return t.indexOf('你没明白') !== -1 || t.indexOf('你不明白') !== -1; },
+    quote: 'Toxic level: CRITICAL. 请戴好防NPD面具再继续阅读。'
+  },
+  {
+    test: function(t) { return t.indexOf('大力气') !== -1; },
+    quote: '检测到高浓度控制性话术，请勿吸入。'
+  },
+  {
+    test: function(t) { return /比.{1,10}预想.{1,10}年/.test(t); },
+    quote: '爆炸性屎已确认，建议撤离现场。'
+  },
+  {
+    test: function(t) { return t.indexOf('看我开车来') !== -1; },
+    quote: '救护车！wei儿wa～wei儿wa～'
+  }
 ];
 
 var LEADER_OPINION_QUOTES = [
@@ -236,18 +266,50 @@ function detectLeader(text) {
   return 'opinion';
 }
 
-function showResult(level, label, scoreVal, detectedHTML, quotesArr) {
+function showResult(level, label, scoreVal, detectedHTML, quotesArr, boomQuotes) {
   document.getElementById('result').style.display = 'block';
+  var hasBoom = boomQuotes && boomQuotes.length > 0;
+  var isGiant = level === 'shit';
+
+  // 主badge：爆炸屎存在且不是一坨巨大的屎时隐藏
   var badge = document.getElementById('verdict-badge');
-  badge.className = 'verdict ' + level;
-  badge.textContent = label;
+  if (hasBoom && !isGiant) {
+    badge.style.display = 'none';
+  } else {
+    badge.style.display = 'inline-block';
+    badge.className = 'verdict ' + level;
+    badge.textContent = label;
+  }
+
+  // 爆炸屎badge
+  var boomBadgeEl = document.getElementById('boom-badge');
+  var boomNoteEl = document.getElementById('boom-note');
+  if (hasBoom) {
+    boomBadgeEl.style.display = 'inline-block';
+    if (!isGiant) {
+      boomNoteEl.style.display = 'block';
+    } else {
+      boomNoteEl.style.display = 'none';
+    }
+  } else {
+    boomBadgeEl.style.display = 'none';
+    boomNoteEl.style.display = 'none';
+  }
+
   var fill = document.getElementById('score-fill');
   fill.className = 'score-fill ' + level;
   setTimeout(function() { fill.style.width = scoreVal + '%'; }, 50);
   document.getElementById('detected-words').innerHTML = detectedHTML;
-  document.getElementById('quotes').innerHTML = quotesArr.map(function(q) {
+
+  var allQuotes = quotesArr.map(function(q) {
     return '<div class="quote">' + q + '</div>';
-  }).join('');
+  });
+  if (hasBoom) {
+    boomQuotes.forEach(function(q) {
+      allQuotes.push('<div class="quote boom-quote">' + q + '</div>');
+    });
+  }
+  document.getElementById('quotes').innerHTML = allQuotes.join('');
 }
 
 function detect() {
@@ -259,31 +321,41 @@ function detect() {
   if (leaderResult === 'opinion') {
     var leaderQuotes = LEADER_OPINION_QUOTES.slice();
     if (isOffHours()) leaderQuotes.push(pick(OFFHOURS_QUOTES, 1)[0]);
-    showResult('meh', '无可奉告', 0, '', leaderQuotes);
+    showResult('meh', '无可奉告', 0, '', leaderQuotes, []);
+    return;
+  }
+
+  // 爆炸屎预检测（优先于字数限制）
+  var earlyBoom = [];
+  BOOM_CHECKS.forEach(function(c) {
+    if (c.test(text)) earlyBoom.push(c.quote);
+  });
+  if (earlyBoom.length > 0) {
+    showResult('ok', '勉强过关的屎', 0, '', [], earlyBoom);
     return;
   }
 
   // 乱码检测
   if (isGibberish(text)) {
-    showResult('meh', '无效输入', 20, '', pick(GIBBERISH_QUOTES, 1));
+    showResult('meh', '无效输入', 20, '', pick(GIBBERISH_QUOTES, 1), []);
     return;
   }
 
   // 字数太短
   if (text.length < 30) {
-    showResult('meh', '样本不足', 10, '', pick(SHORT_QUOTES, 1));
+    showResult('meh', '样本不足', 10, '', pick(SHORT_QUOTES, 1), []);
     return;
   }
 
   // 1.1 疯了检测（优先级高于1.2）
   if (detectRepeatCrazy(text)) {
-    showResult('shit', '一坨屎', 90, '', ['上班上得彻底疯了？胡言乱语呢？']);
+    showResult('shit', '一坨屎', 90, '', ['上班上得彻底疯了？胡言乱语呢？'], []);
     return;
   }
 
   // 1.2 卡壳检测（单独处理，直接return）
   if (detectRepeatStuck(text)) {
-    showResult('meh', '卡卡卡', 30, '', ['卡壳了？还是上班上疯了？']);
+    showResult('meh', '？？？', 30, '', ['卡壳了？还是上班上疯了？'], []);
     return;
   }
 
@@ -292,7 +364,17 @@ function detect() {
   var specialQuotes = [];
 
   BUZZWORDS.forEach(function(w) {
-    if (text.indexOf(w) !== -1) { score += 15; detected.push(w); }
+    var count = 0;
+    var idx = 0;
+    while ((idx = text.indexOf(w, idx)) !== -1) {
+      count++;
+      idx += w.length;
+    }
+    if (count > 0) {
+      var times = Math.min(count, 3);
+      score += times * 15;
+      detected.push(w);
+    }
   });
 
   STRUCTURE_CHECKS.forEach(function(c) {
@@ -327,7 +409,19 @@ function detect() {
     finalQuotes.push(pick(OFFHOURS_QUOTES, 1)[0]);
   }
 
-  showResult(level, label, score, detectedHTML, finalQuotes);
+  var boomQuotes = [];
+  BOOM_CHECKS.forEach(function(c) {
+    if (c.test(text)) {
+      boomQuotes.push(c.quote);
+    }
+  });
+
+  // 非巨大屎 + 有爆炸屎时，清空其他评价
+  if (boomQuotes.length > 0 && level !== 'shit') {
+    finalQuotes = [];
+  }
+
+  showResult(level, label, score, detectedHTML, finalQuotes, boomQuotes);
 }
 </script>
 </body>
